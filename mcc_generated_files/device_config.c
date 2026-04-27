@@ -58,7 +58,7 @@
 #pragma config FCMEN = OFF    // Fail-Safe Clock Monitor Enable->Fail-Safe Clock Monitor is disabled
 
 // CONFIG2
-#pragma config WRT = OFF    // Flash Memory Self-Write Protection->Write protection off
+#pragma config WRT = HALF    // Flash Memory Self-Write Protection->000h to FFFh write protected, 1000h to 1FFFh may be modified by EECON control
 #pragma config PPS1WAY = ON    // Peripheral Pin Select one-way control->The PPSLOCK bit cannot be cleared once it is set by software
 #pragma config ZCD = OFF    // Zero-cross detect disable->Zero-cross detect circuit is disabled at POR
 #pragma config PLLEN = ON    // Phase Lock Loop enable->4x PLL is always enabled

@@ -53,8 +53,8 @@ void SYSTEM_Initialize(void)
     PIN_MANAGER_Initialize();
     OSCILLATOR_Initialize();
     WDT_Initialize();
-    CMP2_Initialize();
     FVR_Initialize();
+    CMP2_Initialize();
     DAC3_Initialize();
     COG1_Initialize();
     TMR4_Initialize();

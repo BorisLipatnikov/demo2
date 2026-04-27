@@ -15,11 +15,10 @@ extern "C" {
 // идентификатор версии программы по 4 бита
 #pragma config IDLOC0 = 1 // тип
 #pragma config IDLOC1 = 0 // номер сборки(десятки) 0-9
-#pragma config IDLOC2 = 2 // номер сборки(единицы) 1-9-0
+#pragma config IDLOC2 = 3 // номер сборки(единицы) 1-9-0
 #pragma config IDLOC3 = 0 // резерв
 
 void interrupt_tmr0 (void);
-void rx_interrupt (void);
 void HandlerDMX(void);
 
 #define OptoSens RA3
@@ -93,6 +92,7 @@ void switch_device_mode (mode_t);
 struct Device {
     bool save_memory_flag; // есть данные для сохранения в памяти
     bool block_error; // барабан заблокирован, мотор отключен
+    bool save_error; // не получается сохранить настройки
     mode_t mode;
     mode_t new_mode;
     uint16_t timer_error;  // пока только дмикс

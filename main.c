@@ -7,11 +7,18 @@
 void ReadMemory(void) {  
     uint8_t buf[32];
     
+    // версия ПО, IDLock    
+    Software_Version_ID [0] = (uint8_t)FLASH_readConfig (0x8000); // memory.h
+    Software_Version_ID [1] = (uint8_t)FLASH_readConfig (0x8001); 
+    Software_Version_ID [2] = (uint8_t)FLASH_readConfig (0x8002);
+    Software_Version_ID [3] = (uint8_t)FLASH_readConfig (0x8003);  
+    
+    // чтение предустановленных параметров
     for (uint16_t addr = 0x1FC0, ind=0; addr<0x1FE0; ++addr, ++ind) {
         buf[ind] = (uint8_t)FLASH_ReadWord(addr);
     }
     
-    uint16_t L=buf[0], H=buf[1];
+    uint16_t L = buf[0], H = buf[1];
     dmx.start_address = (H<<8)|L;
     dmx.new_address = dmx.start_address;
     switch_device_mode (buf[2]); // device.mode
@@ -31,7 +38,7 @@ void ReadMemory(void) {
     else {            // внедрена подпись устройства
         for (uint8_t a=0, b=8; a<size_device_label; ++a, ++b)
             Device_Label[a] = buf[b]; 
-    }
+    } 
     
     // UID    
     UID[0] = (uint8_t)FLASH_ReadWord(0x1FFF);
@@ -40,19 +47,15 @@ void ReadMemory(void) {
     UID[3] = (uint8_t)FLASH_ReadWord(0x1FFC);
     UID[4] = (uint8_t)FLASH_ReadWord(0x1FFB);
     UID[5] = (uint8_t)FLASH_ReadWord(0x1FFA);
-/*  
-            UID[0] = 0x04;      
-            UID[1] = 0x1C;
-            UID[2] = 0xAA;
-            UID[3] = 0xBC;
-            UID[4] = 0xDE;
-            UID[5] = 0xFF;  
- */ 
-    // версия ПО, IDLock    
-    Software_Version_ID [0] = (uint8_t)FLASH_readConfig (0x8000); // memory.h
-    Software_Version_ID [1] = (uint8_t)FLASH_readConfig (0x8001); 
-    Software_Version_ID [2] = (uint8_t)FLASH_readConfig (0x8002);
-    Software_Version_ID [3] = (uint8_t)FLASH_readConfig (0x8003);    
+
+    if (UID[0] != 0x04) {
+        UID[0] = 0x04;      
+        UID[1] = 0x1C;
+        UID[2] = 0xAA;
+        UID[3] = 0xBC;
+        UID[4] = 0xDE;
+        UID[5] = 0xFF;  
+    }
 }
 
 void WriteMemory(void) {    
@@ -68,14 +71,35 @@ void WriteMemory(void) {
     for (uint8_t a=0, b=8; a<size_device_label; ++a, ++b)
         buf[b] = Device_Label[a]; 
     
-    FLASH_WriteBlock(0x1FC0, buf);
+    uint8_t count = 0;
+    bool match;
+    CLRWDT();
+    do {        
+        match = true;
+        ++count;
+        FLASH_WriteBlock(0x1FC0, buf);        
+        for (uint16_t addr = 0x1FC0, i=0; addr<0x1FE0; ++addr, ++i) {
+            if ( buf[i] != (uint8_t)FLASH_ReadWord(addr) ) {
+                match = false;                
+                break;
+            }
+        }     
+    }while (count<4 && match==false);
+    
+    if (match == false) {
+        device.save_error = true;
+        SendTopDisplayText("E-S");
+    }
     ei();
 }               
 
 void main(void) {
     // initialize the device
     SYSTEM_Initialize();
-    ReadMemory();      
+    ReadMemory();     
+    EUSART_SetRxInterruptHandler(Receive);
+    TMR0_SetInterruptHandler (interrupt_tmr0);
+    
     INTERRUPT_GlobalInterruptEnable();
     INTERRUPT_PeripheralInterruptEnable();    
     HandlerMenu();    
@@ -148,11 +172,6 @@ void interrupt_tmr0 (void) {  // 1ms
 
 void interrupt_sensor (void) {
     return;
-}
-
-void rx_interrupt (void){
-    do { Receive();
-    } while(BUF_RX_FLAG);
 }
 
 //------------------------------------------------------------------------------
@@ -397,10 +416,16 @@ void TimerErrorMes(void) {
     ++device.timer_error;
     if (device.timer_error < period) return;
     device.timer_error = 0;
+    
     // костыль, мигающий экран - ошибку не выводим
     if (display.flash) return;
-        
-    if (dmx.error) {
+    
+    if (device.save_error) {
+        SendTopDisplayText("E-S");
+        motor.target_speed = 0;
+        ResetTimerWorkDisplay();        
+    } 
+    else if (dmx.error) {
         SendTopDisplayText("E-d");
         motor.target_speed = 0;
     }

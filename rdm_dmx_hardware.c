@@ -102,12 +102,12 @@ void UART_Reset(void) {
 	dmx.slot_counter = 0; 	
 	dmx.Break = 0; 
     dmx.Start = 0; 
-    dmx.flag_rx=0;
+    dmx.flag_rx = 0;
     UART_ON;    
 }
 
 void TimerDMX (bool rx_en) {
-    const uint16_t period = 1000; // прерываний, ms
+    const uint16_t period = 1500; // прерываний, ms
     if (!rx_en) {
         dmx.time = 0; 
         dmx.error = 0;  
